@@ -1,14 +1,26 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use actix_web::middleware::Logger;
 
-use actix_files::{Files};
+use actix_files::{Files,NamedFile};
 
 use handlebars::Handlebars;
 use serde_json::json;
 
+
+#[get("/favicon")]
+async fn favicon() -> impl Responder {
+    NamedFile::open("public/favicon.ico")
+}
+
 #[get("/")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+async fn index(reg: web::Data<Handlebars<'_>>) -> impl Responder {
+
+    let html = match reg.render("index",&json!{""}) {
+        Ok(t) => t,
+        Err(t) => t.to_string()
+    };
+
+    HttpResponse::Ok().body(html)
 }
 
 #[post("/echo")]
@@ -20,15 +32,10 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-#[get("/test")]
-async fn test() -> impl Responder {
+#[get("/{test}")]
+async fn test(reg: web::Data<Handlebars<'_>>,name: web::Path<String>) -> impl Responder {
 
-    let mut reg = Handlebars::new();
-    reg.register_templates_directory(".hbs","./sites/").unwrap();
-    reg.register_templates_directory(".hbs","./blocks/").unwrap();
-
-
-    let html = match reg.render("index",&json!{""}) {
+    let html = match reg.render(&name.to_string(),&json!{""}) {
         Ok(t) => t,
         Err(t) => t.to_string()
     };
@@ -39,12 +46,20 @@ async fn test() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     
-    HttpServer::new(|| {
+    let mut reg = Handlebars::new();
+    reg.register_templates_directory(".hbs","./sites/").unwrap();
+    reg.register_templates_directory(".hbs","./blocks/").unwrap();
+
+    let regref = web::Data::new(reg);
+
+    HttpServer::new(move || {
         App::new()
+            .app_data(regref.clone())
             .wrap(Logger::default())
-            .service(hello)
+            .service(index)
             .service(echo)
             .service(test)
+            .service(favicon)
             .route("/hey", web::get().to(manual_hello))
             .service(Files::new("/","./public"))
     })

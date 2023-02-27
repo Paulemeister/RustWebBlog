@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Create New Blog Entry </title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/new.css">
+</head>
+
+<body>
+    {{>navigation}}
+    <div>
+        <form method = "POST" action="/" class="new-blog-form">
+            <input type="text" name="heading"placeholder="Heading">
+            <textarea name="content" placeholder="Sample Content"></textarea>
+            <input type="submit" name="submit">
+        </form>
+    </div>
+</body>
+
+</html>
