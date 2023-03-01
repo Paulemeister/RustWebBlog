@@ -4,8 +4,16 @@ use actix_web::middleware::Logger;
 use actix_files::{Files,NamedFile};
 
 use handlebars::Handlebars;
+use mariadb::MariaDBPool;
 use serde_json::json;
 
+use diesel::prelude::*;
+
+mod mariadb;
+mod schema;
+
+use self::schema::blog_entrys::dsl::*;
+use self::schema::BlogEntry;
 
 #[get("/favicon")]
 async fn favicon() -> impl Responder {
@@ -23,13 +31,25 @@ async fn index(reg: web::Data<Handlebars<'_>>) -> impl Responder {
     HttpResponse::Ok().body(html)
 }
 
-#[post("/echo")]
-async fn echo(req_body: String) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
-}
+#[get("/blog")]
+async fn blog(reg: web::Data<Handlebars<'_>>,pool: web::Data<MariaDBPool>,name: web::Path<String>) -> impl Responder {
+    
+    let mut con = pool.get().expect("Couldn't get Connection");
 
-async fn manual_hello() -> impl Responder {
-    HttpResponse::Ok().body("Hey there!")
+
+    let results = blog_entrys
+        .limit(5)
+        .load::<BlogEntry>(&mut con)
+        .expect("Error loading posts");
+
+    println!("{:?}",results);
+    
+    let html = match reg.render(&name.to_string(),&json!{""}) {
+        Ok(t) => t,
+        Err(t) => t.to_string()
+    };
+    
+    HttpResponse::Ok().body(html)
 }
 
 #[get("/{test}")]
@@ -52,18 +72,23 @@ async fn main() -> std::io::Result<()> {
 
     let regref = web::Data::new(reg);
 
+    let pool1 = mariadb::get_pool();
+    println!("Connected to Database");
+    let pool = web::Data::new(pool1);
+
+    
+
     HttpServer::new(move || {
         App::new()
             .app_data(regref.clone())
+            .app_data(pool.clone())
             .wrap(Logger::default())
             .service(index)
-            .service(echo)
             .service(test)
             .service(favicon)
-            .route("/hey", web::get().to(manual_hello))
             .service(Files::new("/","./public"))
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }

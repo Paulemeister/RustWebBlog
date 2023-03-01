@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  blog:
+    build:
+      context: ./Docker
+      dockerfile: blog.Dockerfile
+    command:
+      - /app/target/debug/web_blog
+    ports:
+      - 3000:3000
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      PORT: 3000
+      DB_PORT: 3306
+
+  mariadb:
+    build:
+      context: ./Docker
+      dockerfile: database.Dockerfile
+    ports:
+      - 3306:3306
+    volumes:
+      - blogDB2:/var/lib/mysql
+    environment: 
+      MARIADB_ROOT_PASSWORD: password
+      MARIADB_HOST: mariadb
+
+
+volumes:
+  blogDB2:
+
