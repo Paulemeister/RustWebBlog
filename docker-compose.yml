@@ -22,13 +22,13 @@ services:
       dockerfile: database.Dockerfile
     ports:
       - 3306:3306
-    volumes:
-      - blogDB2:/var/lib/mysql
+    #volumes:
+      #- blogDB2:/var/lib/mysql
     environment: 
       MARIADB_ROOT_PASSWORD: password
       MARIADB_HOST: mariadb
 
 
-volumes:
-  blogDB2:
+#volumes:
+  #blogDB2:
 

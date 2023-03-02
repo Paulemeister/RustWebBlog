@@ -1,8 +1,11 @@
 use diesel::Queryable;
+use serde::{Deserialize,Serialize};
+
 
 diesel::table!{
     use diesel::sql_types::*;
-    blog_entrys(id) {
+    #[allow(non_snake_case)]
+    BlogEntries(id) {
         id -> Integer,
         heading -> VarChar,
         url -> VarChar,
@@ -12,6 +15,7 @@ diesel::table!{
 }
 
 #[derive(Queryable,Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct BlogEntry{
     pub id: i32,
     pub heading: String,

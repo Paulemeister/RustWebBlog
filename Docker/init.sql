@@ -1,10 +1,10 @@
 CREATE DATABASE Paulemeister;
 
-CREATE USER webserver@localhost IDENTIFIED BY 'webserverpassword';
+CREATE USER 'webserver'@'%' IDENTIFIED BY 'webserverpassword';
 
 
 
-GRANT ALL ON Paulemeister.* TO webserver@localhost IDENTIFIED BY 'webserverpassword';
+GRANT ALL ON Paulemeister.* TO 'webserver'@'%' IDENTIFIED BY 'webserverpassword';
 
 FLUSH PRIVILEGES;
 

@@ -10,14 +10,14 @@
     <div class="stuff">
         <h1>Blog Entries:</h1>
         <div class="blogEntries">
-            <% for (let i= 0; i<blogEntries.length;i++){ %>
-                <a href=<%= "/blog/"+blogEntries[i].url%>>
+            {{#each data}}
+                <a href="/blog/{{url}}">
                     <div class="blogEntry">
-                        <h2 class = "heading"><%= blogEntries[i].heading %></h2>
-                        <p><%- blogEntries[i].description %></p>
+                        <h2 class = "heading">{{heading}}</h2>
+                        <p>{{content}}</p>
                     </div>
                 </a>
-            <% } %> 
+            {{/each}}
         </div>
     </div>
     
