@@ -40,8 +40,7 @@ async fn blog<'a>(appdata: web::Data<AppData<'a>>) -> impl Responder {
 
     let results = BlogEntries
         .limit(5)
-        .load::<BlogEntry>(&mut con)
-        .expect("Error loading posts");
+        .load::<BlogEntry>(&mut con).unwrap_or_default();
 
     let json = json!({"data": results});
     
@@ -73,15 +72,54 @@ async fn test<'a>(req: HttpRequest, appdata: web::Data<AppData<'a>>) -> impl Res
     HttpResponse::Ok().body(html)
 }
 
-#[derive(Clone)]
-struct AppData<'a> {
-    registry: handlebars::Handlebars<'a>,
-    pool: Pool<ConnectionManager<MysqlConnection>>
+#[get("/blog/{article}")]
+async fn blog_article<'a>(req: HttpRequest, appdata: web::Data<AppData<'a>>) -> impl Responder {
+    let math = markdown::Options {
+        parse: markdown::ParseOptions {
+            constructs: markdown::Constructs {
+                math_text: true,
+                math_flow: true,
+                ..Default::default()
+            },
+            math_text_single_dollar: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    
+    let mut con = appdata.pool.get().expect("Couldn't get Connection");
+    let article: String = req.match_info().query("article").parse().unwrap();
+
+    let results: String = BlogEntries
+        .filter(url.eq(article))
+        .select(content)
+        .first(&mut con)
+        .unwrap_or("Error loading posts".to_string());
+    
+
+    
+    let markdown_string = markdown::to_html_with_options(&results,&math).unwrap_or_else(|err| err);
+    let html = match appdata.registry.render("article",&json!({"markdown": markdown_string})) {
+        Ok(t) => t,
+        Err(t) => t.to_string()
+    };
+    HttpResponse::Ok().body(html)
 }
 
+struct AppData<'a> {
+    registry: handlebars::Handlebars<'a>,
+    pool: Pool<ConnectionManager<MysqlConnection>>,
+}
+
+use std::ptr::eq;
+use std::sync::{Mutex,Arc,};
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     
+
+    
+    
+
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let mut reg = Handlebars::new();
@@ -93,7 +131,7 @@ async fn main() -> std::io::Result<()> {
 
     let appdata = web::Data::new(AppData{
         registry: reg,
-        pool: pool
+        pool: pool,
     });
 
     HttpServer::new(move || {
@@ -104,6 +142,7 @@ async fn main() -> std::io::Result<()> {
         .service(index)
         .service(favicon)
         .service(blog)
+        .service(blog_article)
         .service(test)
         .service(Files::new("/","./public"))
     })

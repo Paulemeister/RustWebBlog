@@ -15,7 +15,7 @@ diesel::table!{
 }
 
 #[derive(Queryable,Debug)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Default)]
 pub struct BlogEntry{
     pub id: i32,
     pub heading: String,

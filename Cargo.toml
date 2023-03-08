@@ -13,6 +13,7 @@ diesel = { version = "2.0.3", features = ["mysql", "mysql_backend", "r2d2"] }
 dotenvy = "0.15.6"
 env_logger = "0.10.0"
 handlebars = { version = "4.3.6", features = ["dir_source"] }
+markdown = "1.0.0-alpha.7"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
 
