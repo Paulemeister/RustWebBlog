@@ -1443,6 +1443,7 @@ dependencies = [
  "markdown",
  "serde",
  "serde_json",
+ "url",
 ]
 
 [[package]]

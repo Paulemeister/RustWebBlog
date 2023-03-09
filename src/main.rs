@@ -1,4 +1,4 @@
-use actix_web::{get,  web, App, HttpRequest, HttpResponse , HttpServer, Responder, routes};
+use actix_web::{get,  web, App, HttpRequest, HttpResponse , HttpServer, Responder, routes, post};
 use actix_web::middleware::Logger;
 
 use actix_files::{Files,NamedFile};
@@ -7,10 +7,13 @@ use diesel::r2d2::{Pool,ConnectionManager};
 use diesel::prelude::*;
 
 use handlebars::Handlebars;
+use serde::Deserialize;
 use serde_json::json;
 
 mod mariadb;
 mod schema;
+
+extern crate url;
 
 use self::schema::BlogEntries::dsl::*;
 use self::schema::BlogEntry;
@@ -39,7 +42,7 @@ async fn blog<'a>(appdata: web::Data<AppData<'a>>) -> impl Responder {
     let mut con = appdata.pool.get().expect("Couldn't get Connection");
 
     let results = BlogEntries
-        .limit(5)
+        //.limit(10)
         .load::<BlogEntry>(&mut con).unwrap_or_default();
 
     let json = json!({"data": results});
@@ -106,12 +109,41 @@ async fn blog_article<'a>(req: HttpRequest, appdata: web::Data<AppData<'a>>) -> 
     HttpResponse::Ok().body(html)
 }
 
+
+#[post("/new")]
+async fn new_article<'a>(query: web::Form<NewEntryForm>, req: HttpRequest, appdata: web::Data<AppData<'a>>) -> impl Responder {
+    
+    println!("{:?}",query.0);
+    let article_url: String = query.heading.chars().enumerate().filter_map(|(_s,c)| match c {
+        'A'..='z' => Some(c.to_ascii_lowercase()),
+        '-' | ' ' => Some('-'),
+        _ => None,
+    }).collect();
+    println!("{}",article_url);
+
+    let mut con = appdata.pool.get().expect("Couldn't get Connection");
+    
+    let redirect_url = match diesel::insert_into(BlogEntries).values((query.0, url.eq(article_url))
+        ).execute(&mut con) {
+            Ok(_) => "/blog",
+            Err(_) => "/new"
+        };
+    web::Redirect::to(redirect_url).see_other()
+}
+
+#[derive(Deserialize,Debug,Insertable)]
+#[diesel(table_name = crate::schema::BlogEntries)]
+struct NewEntryForm{
+    heading: String,
+    content: String
+}
+
 struct AppData<'a> {
     registry: handlebars::Handlebars<'a>,
     pool: Pool<ConnectionManager<MysqlConnection>>,
 }
 
-use std::ptr::eq;
+
 use std::sync::{Mutex,Arc,};
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -143,6 +175,7 @@ async fn main() -> std::io::Result<()> {
         .service(favicon)
         .service(blog)
         .service(blog_article)
+        .service(new_article)
         .service(test)
         .service(Files::new("/","./public"))
     })
